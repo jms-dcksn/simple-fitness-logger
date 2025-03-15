@@ -3,7 +3,7 @@ APP_METADATA = {
     'title': 'Fitness Logger',
     'description': 'Track your fitness journey and workout progress',
     'version': '1.0.0',
-    'author': 'Your Name',
+    'author': 'JamesD',
     
     # Navigation items
     'nav_items': [

@@ -40,3 +40,17 @@ htmlcov/
 *.tmp
 *.temp
 *.bak
+
+# Instance folder and database files
+instance/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+
+# Keep migrations folder, but ignore some migration-related files
+migrations/__pycache__/
+migrations/*.pyc
+migrations/*.pyo
+migrations/*.pyd
