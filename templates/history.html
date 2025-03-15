@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Search and Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="searchWorkout" placeholder="Search workouts...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filterExercise">
+                        <option selected>Filter by exercise...</option>
+                        {% for exercise in exercises %}
+                            <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" id="dateFilter">
+                </div>
+                <div class="col-md-2">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+                        <button type="button" class="btn btn-outline-secondary" id="clearFilters">Clear</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Workouts</h5>
+                    <p class="card-text h2">{{ total_workouts }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Weight Lifted</h5>
+                    <p class="card-text h2">{{ total_weight }} lbs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Reps</h5>
+                    <p class="card-text h2">{{ total_reps }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Workout Frequency</h5>
+                    <p class="card-text h2">{{ workout_frequency }}/week</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Workout History -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Workout History</h4>
+                </div>
+                <div class="card-body">
+                    {% for workout in workouts %}
+                    <div class="workout-entry mb-4">
+                        <h5>{{ workout.date|strftime('%B %d, %Y') }}</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Exercise</th>
+                                        <th>Set</th>
+                                        <th>Reps</th>
+                                        <th>Weight</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for set in workout.sets %}
+                                    <tr>
+                                        <td>{{ set.exercise_name }}</td>
+                                        <td>{{ set.set_number }}</td>
+                                        <td>{{ set.reps }}</td>
+                                        <td>{{ set.weight }}lbs</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Most Frequent Exercises -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Most Frequent Exercises</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for exercise in frequent_exercises %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ exercise.name }}
+                            <span class="badge bg-primary rounded-pill">{{ exercise.count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchWorkout');
+    const exerciseFilter = document.getElementById('filterExercise');
+    const dateFilter = document.getElementById('dateFilter');
+    const filterForm = document.querySelector('form');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    
+    function updateWorkoutList(workouts) {
+        const workoutContainer = document.querySelector('.col-md-8 .card .card-body');
+        if (!workoutContainer) {
+            console.error('Could not find workout container');
+            return;
+        }
+        
+        workoutContainer.innerHTML = '';
+        
+        if (!workouts || workouts.length === 0) {
+            workoutContainer.innerHTML = `
+                <div class="alert alert-info">
+                    No workouts found matching your filters.
+                </div>
+            `;
+            return;
+        }
+
+        // Display workouts
+        workouts.forEach(workout => {
+            const date = new Date(workout.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            let html = `
+                <div class="workout-entry mb-4">
+                    <h5>${date}</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Exercise</th>
+                                    <th>Set</th>
+                                    <th>Reps</th>
+                                    <th>Weight</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            
+            let currentExercise = null;
+            let setCounter = 1;
+            
+            workout.sets.forEach(set => {
+                if (currentExercise !== set.exercise_name) {
+                    currentExercise = set.exercise_name;
+                    setCounter = 1;
+                }
+                
+                html += `
+                    <tr>
+                        <td>${setCounter === 1 ? set.exercise_name : ''}</td>
+                        <td>${setCounter}</td>
+                        <td>${set.reps}</td>
+                        <td>${set.weight}lbs</td>
+                    </tr>
+                `;
+                
+                setCounter++;
+            });
+            
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            workoutContainer.innerHTML += html;
+        });
+    }
+    
+    function applyFilters(event) {
+        event.preventDefault();
+        
+        const params = new URLSearchParams({
+            search: searchInput.value || '',
+            exercise: exerciseFilter.value === 'Filter by exercise...' ? '' : exerciseFilter.value,
+            date: dateFilter.value || ''
+        });
+        
+        fetch(`/api/history/filter?${params}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(workouts => {
+                updateWorkoutList(workouts);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error fetching filtered results. Please try again.');
+            });
+    }
+    
+    function clearFilters() {
+        searchInput.value = '';
+        exerciseFilter.value = 'Filter by exercise...';
+        dateFilter.value = '';
+        
+        // Trigger the form submission to refresh the data
+        filterForm.dispatchEvent(new Event('submit'));
+    }
+    
+    // Event Listeners
+    filterForm.addEventListener('submit', applyFilters);
+    clearFiltersBtn.addEventListener('click', clearFilters);
+    
+    // Optional: Add debounced search as you type
+    let timeout = null;
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            filterForm.dispatchEvent(new Event('submit'));
+        }, 300);
+    });
+    
+    // Optional: Immediate filter on select change
+    exerciseFilter.addEventListener('change', () => {
+        filterForm.dispatchEvent(new Event('submit'));
+    });
+    
+    dateFilter.addEventListener('change', () => {
+        filterForm.dispatchEvent(new Event('submit'));
+    });
+});
+</script>
+{% endblock %}

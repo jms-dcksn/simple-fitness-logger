@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4 mb-4">{{ metadata.title }}</h1>
+        {% if metadata.brand_tagline %}
+            <p class="lead text-muted mb-5">{{ metadata.brand_tagline }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title h4">
+                    <i class="bi bi-journal-plus"></i> Log Workout
+                </h2>
+                <p class="card-text text-muted">Track your sets, reps, and weights for each exercise.</p>
+                <a href="{{ url_for('workout') }}" class="btn btn-primary">
+                    Start Workout <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h2 class="card-title h4">
+                    <i class="bi bi-graph-up"></i> View History
+                </h2>
+                <p class="card-text text-muted">Check your previous workouts and track your progress.</p>
+                <a href="{{ url_for('history') }}" class="btn btn-primary">
+                    View History <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 col-md-10 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h2 class="h4 mb-0">
+                    <i class="bi bi-lightning"></i> Quick Log
+                </h2>
+            </div>
+            <div class="card-body">
+                <form id="quickLogForm">
+                    <div class="mb-3">
+                        <label for="exercise" class="form-label">Exercise:</label>
+                        <div class="input-group">
+                            <select id="exercise" class="form-select exercise-select" required>
+                                <option value="">Select Exercise</option>
+                                {% for exercise in exercises %}
+                                <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
+                                <i class="bi bi-plus-lg"></i> New Exercise
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="reps" class="form-label">Reps:</label>
+                            <input type="number" class="form-control" id="reps" required min="1">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="weight" class="form-label">Weight (optional):</label>
+                            <input type="number" class="form-control" id="weight" step="0.5">
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Log Set
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Exercise Modal -->
+<div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}">
+                    <div class="mb-3">
+                        <label for="exerciseName" class="form-label">Exercise Name</label>
+                        <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Exercise</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('newExerciseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Fetch all exercises to refresh the dropdown
+            const exercisesResponse = await fetch('/api/exercises');
+            const exercises = await exercisesResponse.json();
+            
+            // Clear and repopulate the dropdown
+            const select = document.getElementById('exercise');
+            select.innerHTML = '<option value="">Select Exercise</option>';
+            
+            exercises.forEach(exercise => {
+                const option = new Option(exercise.name, exercise.id);
+                select.add(option);
+            });
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
+            modal.hide();
+            
+            // Reset the form
+            this.reset();
+        } else {
+            alert('Error creating exercise');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating exercise');
+    }
+});
+
+document.getElementById('quickLogForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const exerciseId = document.getElementById('exercise').value;
+    const reps = document.getElementById('reps').value;
+    const weight = document.getElementById('weight').value || null;
+    
+    try {
+        const response = await fetch('/log_set', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                exercise_id: exerciseId,
+                reps: parseInt(reps),
+                weight: weight ? parseFloat(weight) : null
+            })
+        });
+        
+        if (response.ok) {
+            // Reset form
+            this.reset();
+            alert('Set logged successfully!');
+        } else {
+            alert('Error logging set');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error logging set');
+    }
+});
+</script>
+
+{% endblock %}

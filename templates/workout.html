@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    {% if not active_workout %}
+    <!-- Create New Workout Form -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Create New Workout</h2>
+        </div>
+        <div class="card-body">
+            <!-- Add button to open new exercise modal -->
+            <button type="button" class="btn btn-outline-primary mb-3" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
+                Create New Exercise
+            </button>
+
+            <form id="workoutForm" method="POST">
+                <div class="mb-3">
+                    <label for="workoutName" class="form-label">Workout Name</label>
+                    <input type="text" class="form-control" id="workoutName" name="workout_name" required>
+                </div>
+                
+                <div id="exerciseList">
+                    <div class="exercise-entry mb-3">
+                        <select class="form-select exercise-select" name="exercises[]" required>
+                            <option value="">Select Exercise</option>
+                            {% for exercise in exercises %}
+                            <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Changed to a regular button outside the form -->
+                <div class="mb-3">
+                    <button type="button" class="btn btn-secondary me-2" id="addExerciseBtn">Add Another Exercise</button>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Start Workout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Exercise Modal -->
+    <div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}">
+                        <div class="mb-3">
+                            <label for="exerciseName" class="form-label">Exercise Name</label>
+                            <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Exercise</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Active Workout Section -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2>{{ active_workout.name }}</h2>
+            <form action="{{ url_for('finish_workout') }}" method="POST" class="m-0">
+                <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
+                <button type="submit" class="btn btn-primary">Finish Workout</button>
+            </form>
+        </div>
+        <div class="card-body">
+            {% for workout_exercise in active_workout.workout_exercises %}
+            <div class="exercise-section mb-4">
+                <h3>{{ workout_exercise.exercise.name }}</h3>
+                
+                <!-- Set History -->
+                <div class="set-history mb-3">
+                    <h4>Sets</h4>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Set</th>
+                                <th>Weight (lbs)</th>
+                                <th>Reps</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for set in workout_exercise.exercise.sets %}
+                            {% if set.workout_id == active_workout.id %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ set.weight }}</td>
+                                <td>{{ set.reps }}</td>
+                                <td>{{ set.timestamp.strftime('%H:%M:%S') }}</td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Log New Set Form -->
+                <form class="log-set-form" method="POST" action="{{ url_for('log_set') }}">
+                    <input type="hidden" name="exercise_id" value="{{ workout_exercise.exercise.id }}">
+                    <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
+                    <div class="row">
+                        <div class="col">
+                            <input type="number" class="form-control" name="weight" step="0.5" placeholder="Weight (lbs)" required>
+                        </div>
+                        <div class="col">
+                            <input type="number" class="form-control" name="reps" placeholder="Reps" required>
+                        </div>
+                        <div class="col">
+                            <button type="submit" class="btn btn-success">Log Set</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('addExerciseBtn').addEventListener('click', function() {
+    const exerciseList = document.getElementById('exerciseList');
+    const exerciseEntry = document.createElement('div');
+    exerciseEntry.className = 'exercise-entry mb-3';
+    
+    // Clone the first select element and its options
+    const originalSelect = document.querySelector('.exercise-select');
+    const newSelect = originalSelect.cloneNode(true);
+    newSelect.value = ''; // Reset the selection
+    newSelect.name = 'exercises[]'; // Ensure the name attribute is set correctly
+    newSelect.className = 'form-select exercise-select'; // Ensure classes are set
+    
+    exerciseEntry.appendChild(newSelect);
+    exerciseList.appendChild(exerciseEntry);
+});
+
+// Add handler for new exercise form
+document.getElementById('newExerciseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Add the new exercise to all exercise select dropdowns
+            const selects = document.querySelectorAll('.exercise-select');
+            selects.forEach(select => {
+                const option = new Option(data.name, data.id);
+                select.add(option);
+            });
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
+            modal.hide();
+            
+            // Reset the form
+            this.reset();
+        } else {
+            alert('Error creating exercise');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating exercise');
+    }
+});
+</script>
+{% endblock %}
