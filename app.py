@@ -111,6 +111,43 @@ def history():
         frequent_exercises=frequent_exercises
     )
 
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'delete_set':
+            set_id = request.form.get('set_id')
+            set_to_delete = Set.query.get_or_404(set_id)
+            db.session.delete(set_to_delete)
+            db.session.commit()
+            return jsonify({'success': True})
+            
+        elif action == 'delete_workout':
+            workout_id = request.form.get('workout_id')
+            workout_to_delete = Workout.query.get_or_404(workout_id)
+            
+            # Delete workout_exercise associations first
+            WorkoutExercise.query.filter_by(workout_id=workout_id).delete()
+            
+            # Delete associated sets
+            Set.query.filter_by(workout_id=workout_id).delete()
+            
+            # Finally delete the workout
+            db.session.delete(workout_to_delete)
+            db.session.commit()
+            return jsonify({'success': True})
+    
+    # Get all workouts with their sets
+    workouts = Workout.query.order_by(Workout.date_created.desc()).all()
+    # Get orphaned sets (sets without workouts)
+    orphaned_sets = Set.query.filter_by(workout_id=None).order_by(Set.timestamp.desc()).all()
+    
+    return render_template('admin.html', 
+                         workouts=workouts,
+                         orphaned_sets=orphaned_sets)
+
+
 # API endpoints
 @app.route('/create_exercise', methods=['POST'])
 def create_exercise():
