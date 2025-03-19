@@ -13,7 +13,6 @@
                     <tr>
                         <th>Workout Name</th>
                         <th>Date</th>
-                        <th>Exercises</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -22,11 +21,6 @@
                     <tr>
                         <td>{{ workout.name }}</td>
                         <td>{{ workout.date_created.strftime('%Y-%m-%d') }}</td>
-                        <td>
-                            {% for we in workout.workout_exercises %}
-                            {{ we.exercise.name }}{% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        </td>
                         <td>
                             <button class="btn btn-primary btn-sm repeat-workout" 
                                     data-workout-id="{{ workout.id }}">
@@ -101,7 +95,7 @@
             <h2>{{ active_workout.name }}</h2>
             <form action="{{ url_for('finish_workout') }}" method="POST" class="m-0">
                 <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
-                <button type="submit" class="btn btn-primary">Finish Workout</button>
+                <button type="submit" class="btn btn-primary">Finish</button>
             </form>
         </div>
         <div class="card-body">
@@ -113,7 +107,7 @@
                             data-bs-toggle="modal" 
                             data-bs-target="#swapExerciseModal"
                             data-workout-exercise-id="{{ workout_exercise.id }}">
-                        Swap Exercise
+                        Swap
                     </button>
                 </h3>
                 
