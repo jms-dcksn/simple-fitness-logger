@@ -2,6 +2,43 @@
 
 {% block content %}
 <div class="container mt-4">
+     <!-- Past Workouts Section -->
+     <div class="card mb-4">
+        <div class="card-header">
+            <h2>Past Workouts</h2>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Workout Name</th>
+                        <th>Date</th>
+                        <th>Exercises</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for workout in past_workouts %}
+                    <tr>
+                        <td>{{ workout.name }}</td>
+                        <td>{{ workout.date_created.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% for we in workout.workout_exercises %}
+                            {{ we.exercise.name }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <button class="btn btn-primary btn-sm repeat-workout" 
+                                    data-workout-id="{{ workout.id }}">
+                                Repeat
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
     {% if not active_workout %}
     <!-- Create New Workout Form -->
     <div class="card mb-4">
@@ -9,10 +46,6 @@
             <h2>Create New Workout</h2>
         </div>
         <div class="card-body">
-            <!-- Add button to open new exercise modal -->
-            <button type="button" class="btn btn-outline-primary mb-3" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
-                Create New Exercise
-            </button>
 
             <form id="workoutForm" method="POST">
                 <div class="mb-3">
@@ -74,7 +107,15 @@
         <div class="card-body">
             {% for workout_exercise in active_workout.workout_exercises %}
             <div class="exercise-section mb-4">
-                <h3>{{ workout_exercise.exercise.name }}</h3>
+                <h3 class="d-flex justify-content-between align-items-center">
+                    {{ workout_exercise.exercise.name }}
+                    <button type="button" class="btn btn-outline-secondary btn-sm" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#swapExerciseModal"
+                            data-workout-exercise-id="{{ workout_exercise.id }}">
+                        Swap Exercise
+                    </button>
+                </h3>
                 
                 <!-- Set History -->
                 <div class="set-history mb-3">
@@ -126,56 +167,122 @@
     {% endif %}
 </div>
 
-<script>
-document.getElementById('addExerciseBtn').addEventListener('click', function() {
-    const exerciseList = document.getElementById('exerciseList');
-    const exerciseEntry = document.createElement('div');
-    exerciseEntry.className = 'exercise-entry mb-3';
-    
-    // Clone the first select element and its options
-    const originalSelect = document.querySelector('.exercise-select');
-    const newSelect = originalSelect.cloneNode(true);
-    newSelect.value = ''; // Reset the selection
-    newSelect.name = 'exercises[]'; // Ensure the name attribute is set correctly
-    newSelect.className = 'form-select exercise-select'; // Ensure classes are set
-    
-    exerciseEntry.appendChild(newSelect);
-    exerciseList.appendChild(exerciseEntry);
-});
+<!-- Swap Exercise Modal -->
+<div class="modal fade" id="swapExerciseModal" tabindex="-1" aria-labelledby="swapExerciseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="swapExerciseModalLabel">Swap Exercise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="swapExerciseForm" method="POST" action="{{ url_for('swap_exercise') }}">
+                    <input type="hidden" name="workout_exercise_id" id="workoutExerciseId">
+                    <div class="mb-3">
+                        <label for="newExercise" class="form-label">Select New Exercise</label>
+                        <select class="form-select" id="newExercise" name="new_exercise_id" required>
+                            <option value="">Select Exercise</option>
+                            {% for exercise in exercises %}
+                            <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Swap Exercise</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
-// Add handler for new exercise form
-document.getElementById('newExerciseForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
+<script>
     
-    try {
-        const response = await fetch(this.action, {
-            method: 'POST',
-            body: formData
+    // Initialize modals properly
+    document.addEventListener('DOMContentLoaded', function() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modalEl => {
+            if (!bootstrap.Modal.getInstance(modalEl)) {
+                new bootstrap.Modal(modalEl, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                console.log('Modal initialized:', modalEl.id);
+            }
         });
+    });
+    // Add handler for add exercise button (if it exists)
+
+ 
+const swapExerciseModal = document.getElementById('swapExerciseModal');
+if (swapExerciseModal) {
+    swapExerciseModal.addEventListener('show.bs.modal', function (event) {
+        // Add console.log for debugging
+        console.log('Modal opening, button:', event.relatedTarget);
         
-        if (response.ok) {
-            const data = await response.json();
-            // Add the new exercise to all exercise select dropdowns
-            const selects = document.querySelectorAll('.exercise-select');
-            selects.forEach(select => {
-                const option = new Option(data.name, data.id);
-                select.add(option);
-            });
+        const button = event.relatedTarget;
+        const workoutExerciseId = button.getAttribute('data-workout-exercise-id');
+        console.log('workoutExerciseId:', workoutExerciseId);
+        
+        // Set the value in the hidden input
+        const hiddenInput = document.getElementById('workoutExerciseId');
+        hiddenInput.value = workoutExerciseId;
+        console.log('Hidden input value set to:', hiddenInput.value);
+    });
+}
+
+ // Add handler for swap exercise form
+ const swapExerciseForm = document.getElementById('swapExerciseForm');
+    if (swapExerciseForm) {
+        swapExerciseForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
             
-            // Close the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
-            modal.hide();
-            
-            // Reset the form
-            this.reset();
-        } else {
-            alert('Error creating exercise');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error creating exercise');
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server response:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error swapping exercise');
+            }
+        });
     }
-});
+
+// Add handler for repeat workout buttons
+document.querySelectorAll('.repeat-workout').forEach(button => {
+        button.addEventListener('click', async function() {
+            const workoutId = this.getAttribute('data-workout-id');
+            try {
+                const response = await fetch('/api/clone_workout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ workout_id: workoutId })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to clone workout');
+                }
+                
+                // Reload the page to show the new active workout
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to clone workout');
+            }
+        });
+    });
+
 </script>
 {% endblock %}

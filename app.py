@@ -22,6 +22,9 @@ def workout():
     # Get the active workout (most recent unfinished workout)
     active_workout = Workout.query.filter_by(finished=False).order_by(Workout.date_created.desc()).first()
     exercises = Exercise.query.all()
+
+    # Get past workouts for the list
+    past_workouts = Workout.query.filter_by(finished=True).order_by(Workout.date_created.desc()).limit(5).all()
     
     if request.method == 'POST':
         # Create new workout
@@ -45,7 +48,10 @@ def workout():
         db.session.commit()
         return redirect(url_for('workout'))
     
-    return render_template('workout.html', exercises=exercises, active_workout=active_workout)
+    return render_template('workout.html', 
+                         exercises=exercises, 
+                         active_workout=active_workout,
+                         past_workouts=past_workouts)
 
 @app.route('/history')
 def history():
@@ -149,6 +155,49 @@ def admin():
 
 
 # API endpoints
+@app.route('/api/clone_workout', methods=['POST'])
+def clone_workout():
+    try:
+        data = request.get_json()
+        original_workout_id = data.get('workout_id')
+        
+        # First, check for any existing active workouts and delete them
+        active_workouts = Workout.query.filter_by(finished=False).all()
+        for workout in active_workouts:
+            # Delete associated workout exercises first
+            WorkoutExercise.query.filter_by(workout_id=workout.id).delete()
+            # Delete any sets associated with this workout
+            Set.query.filter_by(workout_id=workout.id).delete()
+            # Delete the workout itself
+            db.session.delete(workout)
+        
+        # Get the original workout
+        original_workout = Workout.query.get_or_404(original_workout_id)
+        
+        # Create new workout
+        new_workout = Workout(
+            name=f"{original_workout.name}",
+            finished=False
+        )
+        db.session.add(new_workout)
+        db.session.flush()  # This assigns an ID to new_workout
+        
+        # Clone all workout exercises
+        for we in original_workout.workout_exercises:
+            new_we = WorkoutExercise(
+                workout_id=new_workout.id,
+                exercise_id=we.exercise_id,
+                order=we.order
+            )
+            db.session.add(new_we)
+        
+        db.session.commit()
+        return jsonify({'success': True, 'workout_id': new_workout.id})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
 @app.route('/create_exercise', methods=['POST'])
 def create_exercise():
     name = request.form.get('exercise_name')
@@ -202,6 +251,19 @@ def log_set():
         if request.is_json:
             return jsonify({'error': str(e)}), 400
         return "Error logging set", 400
+
+@app.route('/swap_exercise', methods=['POST'])
+def swap_exercise():
+    print("Received swap exercise request")
+    print("Form data:", request.form)
+    workout_exercise_id = request.form.get('workout_exercise_id')
+    new_exercise_id = request.form.get('new_exercise_id')
+    
+    workout_exercise = WorkoutExercise.query.get_or_404(workout_exercise_id)
+    workout_exercise.exercise_id = new_exercise_id
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 @app.route('/api/workouts', methods=['GET', 'POST'])
 def handle_workouts():
