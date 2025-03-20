@@ -2,8 +2,16 @@
 
 {% block content %}
 <div class="container mt-4">
-     <!-- Past Workouts Section -->
-     <div class="card mb-4">
+     
+    {% if not active_workout %}
+        <!-- Create Exercise Button -->
+        <div class="mb-4">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
+                <i class="bi bi-plus-lg"></i> Create Exercise
+            </button>
+        </div>
+    <!-- Past Workouts Section -->
+    <div class="card mb-4">
         <div class="card-header">
             <h2>Past Workouts</h2>
         </div>
@@ -33,7 +41,6 @@
             </table>
         </div>
     </div>
-    {% if not active_workout %}
     <!-- Create New Workout Form -->
     <div class="card mb-4">
         <div class="card-header">
@@ -49,12 +56,14 @@
                 
                 <div id="exerciseList">
                     <div class="exercise-entry mb-3">
-                        <select class="form-select exercise-select" name="exercises[]" required>
-                            <option value="">Select Exercise</option>
-                            {% for exercise in exercises %}
-                            <option value="{{ exercise.id }}">{{ exercise.name }}</option>
-                            {% endfor %}
-                        </select>
+                        <div class="d-flex gap-2">
+                            <select class="form-select exercise-select" name="exercises[]" required>
+                                <option value="">Select Exercise</option>
+                                {% for exercise in exercises %}
+                                <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     </div>
                 </div>
                 
@@ -77,7 +86,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}">
+                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}" data-page="workout">
                         <div class="mb-3">
                             <label for="exerciseName" class="form-label">Exercise Name</label>
                             <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
@@ -206,7 +215,37 @@
     });
     // Add handler for add exercise button (if it exists)
 
- 
+    // Add handler for add exercise button
+    const addExerciseBtn = document.getElementById('addExerciseBtn');
+    const exerciseList = document.getElementById('exerciseList');
+    
+    if (addExerciseBtn && exerciseList) {
+        addExerciseBtn.addEventListener('click', function() {
+            // Clone the first exercise entry
+            const firstExercise = exerciseList.querySelector('.exercise-entry');
+            const newExercise = firstExercise.cloneNode(true);
+            
+            // Reset the select value
+            const select = newExercise.querySelector('select');
+            select.value = '';
+            
+            // Create and add remove button
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-danger';
+            removeBtn.textContent = 'Remove';
+            removeBtn.onclick = function() {
+                newExercise.remove();
+            };
+            
+            // Add the remove button to the flex container
+            newExercise.querySelector('.d-flex').appendChild(removeBtn);
+            
+            // Add the new exercise to the list
+            exerciseList.appendChild(newExercise);
+        });
+    }
+
 const swapExerciseModal = document.getElementById('swapExerciseModal');
 if (swapExerciseModal) {
     swapExerciseModal.addEventListener('show.bs.modal', function (event) {
@@ -277,6 +316,52 @@ document.querySelectorAll('.repeat-workout').forEach(button => {
             }
         });
     });
+
+// Add handler for new exercise form
+document.getElementById('newExerciseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Fetch all exercises to refresh the dropdowns
+            const exercisesResponse = await fetch('/api/exercises');
+            const exercises = await exercisesResponse.json();
+            
+            // Update all exercise select dropdowns
+            const selects = document.querySelectorAll('.exercise-select');
+            selects.forEach(select => {
+                select.innerHTML = '<option value="">Select Exercise</option>';
+                exercises.forEach(exercise => {
+                    const option = new Option(exercise.name, exercise.id);
+                    select.add(option);
+                });
+            });
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
+            modal.hide();
+            
+            // Reset the form
+            this.reset();
+        } else {
+            alert('Error creating exercise');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating exercise');
+    }
+});
 
 </script>
 {% endblock %}

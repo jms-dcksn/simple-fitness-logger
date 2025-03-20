@@ -208,7 +208,13 @@ def create_exercise():
     exercise = Exercise(name=name)
     db.session.add(exercise)
     db.session.commit()
-    return jsonify({'id': exercise.id, 'name': exercise.name})
+
+    # Check if the request wants JSON (from fetch/AJAX) or HTML (from form)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'id': exercise.id, 'name': exercise.name})
+    else:
+        # Redirect back to the referring page
+        return redirect(request.referrer or url_for('index'))
 
 @app.route('/api/exercises', methods=['GET'])
 def get_exercises():
