@@ -4,19 +4,55 @@
 <div class="container mt-4">
      
     {% if not active_workout %}
-        <!-- Create Exercise Button -->
-        <div class="mb-4">
-            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
-                <i class="bi bi-plus-lg"></i> Create Exercise
-            </button>
+        <!-- Create Exercise Button - Moved to top right -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">Workout Dashboard</h1>
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
+            <i class="bi bi-plus-lg"></i> Create Exercise
+        </button>
+    </div>
+        <!-- Create New Workout Form - Moved to top -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h4 mb-0">Start New Workout</h2>
+            </div>
+            <div class="card-body">
+                <form id="workoutForm" method="POST">
+                    <div class="mb-3">
+                        <label for="workoutName" class="form-label">Workout Name</label>
+                        <input type="text" class="form-control" id="workoutName" name="workout_name" required>
+                    </div>
+                    
+                    <div id="exerciseList">
+                        <div class="exercise-entry mb-3">
+                            <div class="d-flex gap-2">
+                                <select class="form-select exercise-select" name="exercises[]" required>
+                                    <option value="">Select Exercise</option>
+                                    {% for exercise in exercises %}
+                                    <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Changed to a regular button outside the form -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-secondary me-2" id="addExerciseBtn">Add Another Exercise</button>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Start Workout</button>
+                </form>
+            </div>
         </div>
-    <!-- Past Workouts Section -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>Past Workouts</h2>
+    <!-- Past Workouts Section - Moved below -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">Recent Workouts</h2>
         </div>
-        <div class="card-body">
-            <table class="table table-sm">
+        <div class="card-body p-0"> <!-- Removed padding for modern look -->
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>Workout Name</th>
@@ -41,70 +77,17 @@
             </table>
         </div>
     </div>
-    <!-- Create New Workout Form -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>Create New Workout</h2>
-        </div>
-        <div class="card-body">
 
-            <form id="workoutForm" method="POST">
-                <div class="mb-3">
-                    <label for="workoutName" class="form-label">Workout Name</label>
-                    <input type="text" class="form-control" id="workoutName" name="workout_name" required>
-                </div>
-                
-                <div id="exerciseList">
-                    <div class="exercise-entry mb-3">
-                        <div class="d-flex gap-2">
-                            <select class="form-select exercise-select" name="exercises[]" required>
-                                <option value="">Select Exercise</option>
-                                {% for exercise in exercises %}
-                                <option value="{{ exercise.id }}">{{ exercise.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Changed to a regular button outside the form -->
-                <div class="mb-3">
-                    <button type="button" class="btn btn-secondary me-2" id="addExerciseBtn">Add Another Exercise</button>
-                </div>
-                
-                <button type="submit" class="btn btn-primary">Start Workout</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- New Exercise Modal -->
-    <div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}" data-page="workout">
-                        <div class="mb-3">
-                            <label for="exerciseName" class="form-label">Exercise Name</label>
-                            <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Create Exercise</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
     {% else %}
     <!-- Active Workout Section -->
     <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h2>{{ active_workout.name }}</h2>
+        <div class="card-header d-flex justify-content-between align-items-center bg-gradient" style="background: linear-gradient(45deg, #ff3d3d22, transparent)">
+            <h2 class="h3 mb-0">{{ active_workout.name }}</h2>
             <form action="{{ url_for('finish_workout') }}" method="POST" class="m-0">
                 <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
-                <button type="submit" class="btn btn-primary">Finish</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-flag-fill"></i> Finish Workout
+                </button>
             </form>
         </div>
         <div class="card-body">
@@ -198,23 +181,7 @@
 </div>
 
 <script>
-    
-    // Initialize modals properly
-    document.addEventListener('DOMContentLoaded', function() {
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modalEl => {
-            if (!bootstrap.Modal.getInstance(modalEl)) {
-                new bootstrap.Modal(modalEl, {
-                    backdrop: true,
-                    keyboard: true,
-                    focus: true
-                });
-                console.log('Modal initialized:', modalEl.id);
-            }
-        });
-    });
     // Add handler for add exercise button (if it exists)
-
     // Add handler for add exercise button
     const addExerciseBtn = document.getElementById('addExerciseBtn');
     const exerciseList = document.getElementById('exerciseList');
@@ -316,52 +283,6 @@ document.querySelectorAll('.repeat-workout').forEach(button => {
             }
         });
     });
-
-// Add handler for new exercise form
-document.getElementById('newExerciseForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    
-    try {
-        const response = await fetch(this.action, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: formData
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            
-            // Fetch all exercises to refresh the dropdowns
-            const exercisesResponse = await fetch('/api/exercises');
-            const exercises = await exercisesResponse.json();
-            
-            // Update all exercise select dropdowns
-            const selects = document.querySelectorAll('.exercise-select');
-            selects.forEach(select => {
-                select.innerHTML = '<option value="">Select Exercise</option>';
-                exercises.forEach(exercise => {
-                    const option = new Option(exercise.name, exercise.id);
-                    select.add(option);
-                });
-            });
-            
-            // Close the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
-            modal.hide();
-            
-            // Reset the form
-            this.reset();
-        } else {
-            alert('Error creating exercise');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error creating exercise');
-    }
-});
 
 </script>
 {% endblock %}

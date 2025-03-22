@@ -64,10 +64,11 @@ def history():
     # Calculate statistics
     total_workouts = len(workouts)
     
-    # Calculate total weight and reps
+    # Calculate average weight and reps per workout
     sets = Set.query.all()
-    total_weight = sum(s.weight or 0 for s in sets)
-    total_reps = sum(s.reps for s in sets)
+    total_workouts = max(1, total_workouts)  # Prevent division by zero
+    avg_weight = sum(s.weight or 0 for s in sets) / total_workouts
+    avg_reps = sum(s.reps for s in sets) / total_workouts
     
     # Calculate workout frequency (workouts per week)
     if workouts:
@@ -111,8 +112,8 @@ def history():
         workouts=formatted_workouts,
         exercises=exercises,
         total_workouts=total_workouts,
-        total_weight=total_weight,
-        total_reps=total_reps,
+        total_weight=round(avg_weight, 1),  # Rounded to 1 decimal place
+        total_reps=round(avg_reps, 1),
         workout_frequency=workout_frequency,
         frequent_exercises=frequent_exercises
     )
@@ -200,21 +201,33 @@ def clone_workout():
 
 @app.route('/create_exercise', methods=['POST'])
 def create_exercise():
-    name = request.form.get('exercise_name')
-    
-    if not name:
-        return jsonify({'error': 'Exercise name is required'}), 400
+    try:
+        name = request.form.get('exercise_name')
         
-    exercise = Exercise(name=name)
-    db.session.add(exercise)
-    db.session.commit()
-
-    # Check if the request wants JSON (from fetch/AJAX) or HTML (from form)
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'id': exercise.id, 'name': exercise.name})
-    else:
-        # Redirect back to the referring page
-        return redirect(request.referrer or url_for('index'))
+        if not name:
+            return jsonify({'error': 'Exercise name is required'}), 400
+        
+        # Check if exercise already exists
+        existing_exercise = Exercise.query.filter_by(name=name).first()
+        if existing_exercise:
+            return jsonify({'error': 'Exercise already exists'}), 400
+            
+        exercise = Exercise(name=name)
+        db.session.add(exercise)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'id': exercise.id,
+            'name': exercise.name
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': 'Failed to create exercise',
+            'details': str(e)
+        }), 500
 
 @app.route('/api/exercises', methods=['GET'])
 def get_exercises():

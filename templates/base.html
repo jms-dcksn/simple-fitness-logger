@@ -10,6 +10,8 @@
     
      <!-- Optional: Bootstrap Icons -->
      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"> 
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
     
 </head>
 <body>
@@ -40,11 +42,47 @@
         </div>
     </main>
 
+    <!-- Common New Exercise Modal - Move this to base.html -->
+    <div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}" data-page="workout">
+                        <div class="mb-3">
+                            <label for="exerciseName" class="form-label">Exercise Name</label>
+                            <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Exercise</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript files at the end of body -->
      <!-- jQuery must be loaded before Bootstrap JavaScript -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Bootstrap JavaScript Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the modal once
+            const newExerciseForm = document.getElementById('newExerciseForm');
+            if (newExerciseForm) {
+                newExerciseForm.addEventListener('submit', fitnessUtils.handleExerciseFormSubmit);
+            }
+
+            // Clean up modal content when hidden
+            document.getElementById('newExerciseModal').addEventListener('hidden.bs.modal', function () {
+                const form = this.querySelector('form');
+                if (form) form.reset();
+            });
+        });
+    </script>
 </body>
 </html>

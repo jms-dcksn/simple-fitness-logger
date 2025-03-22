@@ -1,161 +1,145 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+:root {
+    --bs-body-bg: #121212;
+    --bs-body-color: #e0e0e0;
+    --bs-primary: #ff3d3d;
+    --bs-primary-rgb: 255, 61, 61;
+    --accent-color: #ff3d3d;
+    --card-bg: #1e1e1e;
+    --hover-bg: #2a2a2a;
 }
 
+/* Base Styles */
 body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    padding: 20px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
 }
 
-nav {
-    background: #f4f4f4;
-    padding: 1rem;
-    margin-bottom: 2rem;
+/* Navigation */
+.navbar {
+    background: #1a1a1a !important;
+    border-bottom: 1px solid #333;
 }
 
-nav ul {
-    list-style: none;
-    display: flex;
-    gap: 1rem;
-}
-
-nav a {
-    text-decoration: none;
-    color: #333;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-input, button {
-    padding: 0.5rem;
-    margin: 0.5rem 0;
-}
-
-button {
-    background: #333;
-    color: white;
-    border: none;
-    cursor: pointer;
-    padding: 0.5rem 1rem;
-}
-
-button:hover {
-    background: #555;
-}
-
-.workout-list, .history-list {
-    margin-top: 2rem;
-}
-
-.set-entry {
-    border: 1px solid #ddd;
-    padding: 1rem;
-    margin: 0.5rem 0;
-}
-
-/* Add these styles to your existing style.css */
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-h1 {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #333;
-}
-
-.feature-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
-}
-
+/* Cards */
 .card {
-    background: #fff;
-    border-radius: 8px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid #333;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
 }
 
-.card h2 {
-    color: #333;
-    margin-bottom: 1rem;
+.card:hover {
+    transform: translateY(-2px);
 }
 
-.card p {
-    color: #666;
-    margin-bottom: 1.5rem;
+/* Buttons */
+.btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
 }
 
-.button {
-    display: inline-block;
-    padding: 0.8rem 1.5rem;
-    background: #007bff;
-    color: white;
-    text-decoration: none;
-    border-radius: 4px;
-    transition: background 0.3s;
+.btn-primary:hover {
+    background-color: #ff2424;
+    border-color: #ff2424;
 }
 
-.button:hover {
-    background: #0056b3;
+.btn-outline-secondary {
+    border-color: #666;
+    color: #fff;
 }
 
-.quick-log {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 2rem;
-    background: #f8f9fa;
-    border-radius: 8px;
+.btn-outline-secondary:hover {
+    background-color: #666;
+    border-color: #666;
 }
 
-.form-group {
-    margin-bottom: 1rem;
+/* Forms */
+.form-control, 
+.form-select {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #fff;
 }
 
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: #333;
+.form-control:focus, 
+.form-select:focus {
+    background-color: #333;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.25rem rgba(255, 61, 61, 0.25);
 }
 
-.form-group input,
-.form-group select {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+/* Tables */
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #fff;
 }
 
-button {
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.3s;
+/* Modals */
+.modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid #333;
 }
 
-button:hover {
-    background: #0056b3;
+.modal-header {
+    border-bottom: 1px solid #333;
 }
 
-#addExerciseBtn {
-    margin-top: 0.5rem;
-    background: #6c757d;
-    width: 100%;
+.modal-footer {
+    border-top: 1px solid #333;
 }
 
-#addExerciseBtn:hover {
-    background: #5a6268;
+/* Active Workout Styles */
+.active-workout-header {
+    background: linear-gradient(45deg, #ff3d3d22, transparent);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .container {
+        padding: 0.5rem;
+    }
+}
+
+/* Add these modal-specific styles to your existing CSS */
+.modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-backdrop {
+    /* Prevent multiple backdrops */
+    display: none;
+}
+
+/* Prevent content shift when modal opens */
+body {
+    padding-right: 0 !important;
+    overflow-y: scroll !important;
+}
+
+/* Ensure modal appears above other content */
+.modal {
+    z-index: 1050;
+}
+
+/* Smooth transition for modal */
+.modal.fade .modal-dialog {
+    transition: transform 0.2s ease-out;
+}
+
+.modal.show .modal-dialog {
+    transform: none;
 }
