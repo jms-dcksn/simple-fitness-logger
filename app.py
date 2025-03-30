@@ -12,6 +12,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 
+
+# Add this function after the other route definitions
+def get_last_set_for_exercise(exercise_id, current_workout_id):
+    """Get the last recorded set for an exercise, excluding sets from the current workout."""
+    return Set.query.filter(
+        Set.exercise_id == exercise_id,
+        Set.workout_id != current_workout_id
+    ).order_by(Set.timestamp.desc()).first()
+
 @app.route('/')
 def index():
     exercises = Exercise.query.all()
@@ -47,6 +56,14 @@ def workout():
         
         db.session.commit()
         return redirect(url_for('workout'))
+    
+    if request.method == 'GET' and active_workout:
+        # Add last set information for each exercise
+        for workout_exercise in active_workout.workout_exercises:
+            workout_exercise.last_set = get_last_set_for_exercise(
+                workout_exercise.exercise.id,
+                active_workout.id
+            )
     
     return render_template('workout.html', 
                          exercises=exercises, 
@@ -284,6 +301,55 @@ def swap_exercise():
     
     return jsonify({'success': True})
 
+@app.route('/api/delete_workout_exercise', methods=['POST'])
+def delete_workout_exercise():
+    try:
+        data = request.get_json()
+        workout_exercise_id = data.get('workout_exercise_id')
+        
+        # Delete the workout exercise
+        workout_exercise = WorkoutExercise.query.get_or_404(workout_exercise_id)
+        
+        # Delete any associated sets
+        Set.query.filter_by(
+            workout_id=workout_exercise.workout_id,
+            exercise_id=workout_exercise.exercise_id
+        ).delete()
+        
+        # Delete the workout exercise
+        db.session.delete(workout_exercise)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/add_workout_exercise', methods=['POST'])
+def add_workout_exercise():
+    try:
+        workout_id = request.form.get('workout_id')
+        exercise_id = request.form.get('exercise_id')
+        
+        # Get the highest order number for the current workout
+        max_order = db.session.query(db.func.max(WorkoutExercise.order))\
+            .filter_by(workout_id=workout_id).scalar() or -1
+        
+        # Create new workout exercise with next order number
+        workout_exercise = WorkoutExercise(
+            workout_id=workout_id,
+            exercise_id=exercise_id,
+            order=max_order + 1
+        )
+        
+        db.session.add(workout_exercise)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
 @app.route('/api/workouts', methods=['GET', 'POST'])
 def handle_workouts():
     if request.method == 'POST':
@@ -311,6 +377,7 @@ def handle_workouts():
             'name': w.name,
             'date': w.date_created.isoformat()
         } for w in workouts])
+
 
 @app.route('/api/history/filter', methods=['GET'])
 def filter_history():

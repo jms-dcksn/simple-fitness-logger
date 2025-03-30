@@ -95,13 +95,31 @@
             <div class="exercise-section mb-4">
                 <h3 class="d-flex justify-content-between align-items-center">
                     {{ workout_exercise.exercise.name }}
-                    <button type="button" class="btn btn-outline-secondary btn-sm" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#swapExerciseModal"
-                            data-workout-exercise-id="{{ workout_exercise.id }}">
-                        Swap
-                    </button>
+                    <div class="btn-group gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#swapExerciseModal"
+                                data-workout-exercise-id="{{ workout_exercise.id }}">
+                            Swap
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm delete-exercise"
+                                data-workout-exercise-id="{{ workout_exercise.id }}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </h3>
+
+                    <!-- Add Last Set Information -->
+                {% if workout_exercise.last_set %}
+                <div class="last-set-info mb-3">
+                    <small class="text-muted">Last Set:</small>
+                    <div class="d-flex gap-3">
+                        <span><strong>{{ workout_exercise.last_set.weight }}</strong> lbs</span>
+                        <span><strong>{{ workout_exercise.last_set.reps }}</strong> reps</span>
+                        <span class="text-muted">{{ workout_exercise.last_set.timestamp.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                </div>
+                {% endif %}
                 
                 <!-- Set History -->
                 <div class="set-history mb-3">
@@ -153,6 +171,28 @@
     {% endif %}
 </div>
 
+<!-- Add this at the bottom of the active workout card, just before the closing card-body div -->
+<div class="add-exercise-section mt-4">
+    <h4>Add Exercise</h4>
+    <form class="add-exercise-form" method="POST" action="{{ url_for('add_workout_exercise') }}">
+        <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
+        <div class="row">
+            <div class="col">
+                <select class="form-select" name="exercise_id" required>
+                    <option value="">Select Exercise</option>
+                    {% for exercise in exercises %}
+                    <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Add Exercise</button>
+            </div>
+        </div>
+    </form>
+</div>
+</div>
+
 <!-- Swap Exercise Modal -->
 <div class="modal fade" id="swapExerciseModal" tabindex="-1" aria-labelledby="swapExerciseModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -181,8 +221,6 @@
 </div>
 
 <script>
-    // Add handler for add exercise button (if it exists)
-    // Add handler for add exercise button
     const addExerciseBtn = document.getElementById('addExerciseBtn');
     const exerciseList = document.getElementById('exerciseList');
     
@@ -283,6 +321,59 @@ document.querySelectorAll('.repeat-workout').forEach(button => {
             }
         });
     });
+
+// Add handler for delete exercise buttons
+document.querySelectorAll('.delete-exercise').forEach(button => {
+    button.addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to delete this exercise from the workout?')) {
+            return;
+        }
+        
+        const workoutExerciseId = this.getAttribute('data-workout-exercise-id');
+        try {
+            const response = await fetch('/api/delete_workout_exercise', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ workout_exercise_id: workoutExerciseId })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete exercise');
+            }
+            
+            // Reload the page to show the updated workout
+            window.location.reload();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to delete exercise');
+        }
+    });
+});
+
+// Add handler for add exercise form
+document.querySelector('.add-exercise-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to add exercise');
+        }
+        
+        // Reload the page to show the updated workout
+        window.location.reload();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to add exercise');
+    }
+});
 
 </script>
 {% endblock %}

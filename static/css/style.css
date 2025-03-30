@@ -143,3 +143,19 @@ body {
 .modal.show .modal-dialog {
     transform: none;
 }
+
+/* Last Set Info Box Styling */
+.last-set-info {
+    background-color: #252525;
+    border: 1px solid #333;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+}
+
+.last-set-info strong {
+    color: var(--accent-color);
+}
+
+.last-set-info .text-muted {
+    color: #888 !important;
+}
