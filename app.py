@@ -15,11 +15,12 @@ migrate = Migrate(app, db)
 
 # Add this function after the other route definitions
 def get_last_set_for_exercise(exercise_id, current_workout_id):
-    """Get the last recorded set for an exercise, excluding sets from the current workout."""
+    """Get the set with the heaviest weight for an exercise, excluding sets from the current workout."""
     return Set.query.filter(
         Set.exercise_id == exercise_id,
-        Set.workout_id != current_workout_id
-    ).order_by(Set.timestamp.desc()).first()
+        Set.workout_id != current_workout_id,
+        Set.weight.isnot(None)  # Exclude sets with no weight recorded
+    ).order_by(Set.weight.desc()).first()
 
 @app.route('/')
 def index():
