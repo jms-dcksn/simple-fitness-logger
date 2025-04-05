@@ -25,13 +25,16 @@ def get_last_set_for_exercise(exercise_id, current_workout_id):
 @app.route('/')
 def index():
     exercises = Exercise.query.all()
-    return render_template('index.html', exercises=exercises)
+    # Convert exercises to a list of dictionaries
+    exercises_data = [{'id': e.id, 'name': e.name} for e in exercises]
+    return render_template('index.html', exercises=exercises_data)
 
 @app.route('/workout', methods=['GET', 'POST'])
 def workout():
     # Get the active workout (most recent unfinished workout)
     active_workout = Workout.query.filter_by(finished=False).order_by(Workout.date_created.desc()).first()
     exercises = Exercise.query.all()
+    exercises_data = [{'id': e.id, 'name': e.name} for e in exercises]
 
     # Get past workouts for the list
     past_workouts = Workout.query.filter_by(finished=True).order_by(Workout.date_created.desc()).limit(5).all()
@@ -67,7 +70,7 @@ def workout():
             )
     
     return render_template('workout.html', 
-                         exercises=exercises, 
+                         exercises=exercises_data, 
                          active_workout=active_workout,
                          past_workouts=past_workouts)
 

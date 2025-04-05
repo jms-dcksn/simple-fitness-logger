@@ -51,19 +51,29 @@
             <div class="card-body">
                 <form id="quickLogForm">
                     <div class="mb-3">
-                        <label for="exercise" class="form-label">Exercise:</label>
-                        <div class="input-group">
-                            <select id="exercise" class="form-select exercise-select" required>
-                                <option value="">Select Exercise</option>
-                                {% for exercise in exercises %}
-                                <option value="{{ exercise.id }}">{{ exercise.name }}</option>
-                                {% endfor %}
-                            </select>
+                        <label for="exercise" class="form-label">Exercise (searchable):</label>
+                        <input 
+                          type="text" 
+                          class="form-control" 
+                          id="searchExercise" 
+                          name="searchExercise" 
+                          list="exerciseDatalist"
+                          placeholder="Type to filter exercises..."
+                          required
+                        />
+                        <datalist id="exerciseDatalist">
+                            {% for exercise in exercises %}
+                            <option value="{{ exercise.name }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        <input type="hidden" name="exercise_id" id="selectedExerciseId" />
+                    </div>
                             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#newExerciseModal">
                                 <i class="bi bi-plus-lg"></i> New Exercise
                             </button>
                         </div>
                     </div>
+                        <!-- Debugging: Check if exercises are available -->
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -90,15 +100,30 @@
 
 
 <script>
-document.getElementById('quickLogForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+    // Convert exercises to JSON outside of any function
+    const allExercises = {{ exercises|tojson }};
     
-    const exerciseId = document.getElementById('exercise').value;
-    const reps = document.getElementById('reps').value;
-    const weight = document.getElementById('weight').value || null;
-    
-    try {
-        const response = await fetch('/log_set', {
+    // JavaScript to handle exercise selection
+    document.getElementById('quickLogForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();  // Prevent the default form submission
+
+        const typedName = document.getElementById('searchExercise').value;
+        const hiddenInput = document.getElementById('selectedExerciseId');
+        
+        // Find matching exercise ID
+        const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
+        if (match) {
+            hiddenInput.value = match.id;
+        } else {
+            hiddenInput.value = '';
+        }
+
+        // Proceed with form submission using the found exercise ID
+        const exerciseId = hiddenInput.value;
+        const reps = document.getElementById('reps').value;
+        const weight = document.getElementById('weight').value || null;
+        
+        fetch('/log_set', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -108,20 +133,21 @@ document.getElementById('quickLogForm').addEventListener('submit', async functio
                 reps: parseInt(reps),
                 weight: weight ? parseFloat(weight) : null
             })
-        });
-        
-        if (response.ok) {
-            // Reset form
-            this.reset();
-            alert('Set logged successfully!');
-        } else {
+        })
+        .then(response => {
+            if (response.ok) {
+                // Reset form
+                this.reset();
+                alert('Set logged successfully!');
+            } else {
+                alert('Error logging set');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
             alert('Error logging set');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error logging set');
-    }
-});
+        });
+    });
 </script>
 
 {% endblock %}

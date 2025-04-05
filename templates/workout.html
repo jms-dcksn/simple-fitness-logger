@@ -26,12 +26,21 @@
                     <div id="exerciseList">
                         <div class="exercise-entry mb-3">
                             <div class="d-flex gap-2">
-                                <select class="form-select exercise-select" name="exercises[]" required>
-                                    <option value="">Select Exercise</option>
-                                    {% for exercise in exercises %}
-                                    <option value="{{ exercise.id }}">{{ exercise.name }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input 
+                          type="text" 
+                          class="form-control" 
+                          id="searchExercise" 
+                          name="searchExercise" 
+                          list="exerciseDatalist"
+                          placeholder="Type to filter exercises..."
+                          required
+                        />
+                        <datalist id="exerciseDatalist">
+                            {% for exercise in exercises %}
+                            <option value="{{ exercise.name }}"></option>
+                            {% endfor %}
+                        </datalist>
+                        <input type="hidden" name="exercises[]" id="exercise-id-input" />
                             </div>
                         </div>
                     </div>
@@ -167,23 +176,27 @@
             </div>
             {% endfor %}
         </div>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Add this at the bottom of the active workout card, just before the closing card-body div -->
+        <!-- Add this at the bottom of the active workout card, just before the closing card-body div -->
 <div class="add-exercise-section mt-4">
     <h4>Add Exercise</h4>
     <form class="add-exercise-form" method="POST" action="{{ url_for('add_workout_exercise') }}">
         <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
         <div class="row">
             <div class="col">
-                <select class="form-select" name="exercise_id" required>
-                    <option value="">Select Exercise</option>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    name="searchExercise" 
+                    list="exerciseDatalist"
+                    placeholder="Type to filter exercises..."
+                    required
+                />
+                <datalist id="exerciseDatalist">
                     {% for exercise in exercises %}
-                    <option value="{{ exercise.id }}">{{ exercise.name }}</option>
+                    <option value="{{ exercise.name }}"></option>
                     {% endfor %}
-                </select>
+                </datalist>
+                <input type="hidden" name="exercise_id" id="addExerciseId" />
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">Add Exercise</button>
@@ -191,6 +204,9 @@
         </div>
     </form>
 </div>
+</div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Swap Exercise Modal -->
@@ -221,35 +237,68 @@
 </div>
 
 <script>
-    const addExerciseBtn = document.getElementById('addExerciseBtn');
-    const exerciseList = document.getElementById('exerciseList');
+// Convert exercises to JSON outside of any function
+const allExercises = {{ exercises|tojson }};
     
-    if (addExerciseBtn && exerciseList) {
-        addExerciseBtn.addEventListener('click', function() {
-            // Clone the first exercise entry
-            const firstExercise = exerciseList.querySelector('.exercise-entry');
-            const newExercise = firstExercise.cloneNode(true);
-            
-            // Reset the select value
-            const select = newExercise.querySelector('select');
-            select.value = '';
-            
-            // Create and add remove button
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'btn btn-danger';
-            removeBtn.textContent = 'Remove';
-            removeBtn.onclick = function() {
-                newExercise.remove();
-            };
-            
-            // Add the remove button to the flex container
-            newExercise.querySelector('.d-flex').appendChild(removeBtn);
-            
-            // Add the new exercise to the list
-            exerciseList.appendChild(newExercise);
-        });
+const addExerciseBtn = document.getElementById('addExerciseBtn');
+const exerciseList = document.getElementById('exerciseList');
+
+if (addExerciseBtn && exerciseList) {
+    addExerciseBtn.addEventListener('click', function() {
+        // Clone the first exercise entry
+        const firstExercise = exerciseList.querySelector('.exercise-entry');
+        const newExercise = firstExercise.cloneNode(true);
+        
+        // Reset the input values
+        const searchInput = newExercise.querySelector('input[type="text"]');
+        const hiddenInput = newExercise.querySelector('input[name="exercises[]"]');
+        searchInput.value = '';
+        hiddenInput.value = '';
+        
+        // Create and add remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-danger';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = function() {
+            newExercise.remove();
+        };
+        
+        // Add the remove button to the flex container
+        newExercise.querySelector('.d-flex').appendChild(removeBtn);
+        
+        // Add the new exercise to the list
+        exerciseList.appendChild(newExercise);
+    });
+}
+
+// JavaScript to handle exercise selection for all exercise entries
+document.getElementById('workoutForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Get all exercise entries
+    const exerciseEntries = document.querySelectorAll('.exercise-entry');
+    let hasError = false;
+
+    exerciseEntries.forEach(entry => {
+        const typedName = entry.querySelector('input[type="text"]').value;
+        const hiddenInput = entry.querySelector('input[name="exercises[]');
+        
+        // Find matching exercise ID
+        const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
+        if (match) {
+            hiddenInput.value = match.id;
+        } else {
+            hasError = true;
+            alert(`Exercise "${typedName}" not found`);
+        }
+    });
+
+    if (!hasError) {
+        // If all exercises are valid, submit the form
+        this.submit();
     }
+});
 
 const swapExerciseModal = document.getElementById('swapExerciseModal');
 if (swapExerciseModal) {
@@ -352,9 +401,22 @@ document.querySelectorAll('.delete-exercise').forEach(button => {
     });
 });
 
-// Add handler for add exercise form
+// Add handler for add exercise form with searchable input
 document.querySelector('.add-exercise-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
+    
+    const searchInput = this.querySelector('input[name="searchExercise"]');
+    const hiddenInput = this.querySelector('input[name="exercise_id"]');
+    const typedName = searchInput.value;
+    
+    // Find matching exercise ID
+    const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
+    if (!match) {
+        alert(`Exercise "${typedName}" not found`);
+        return;
+    }
+    
+    hiddenInput.value = match.id;
     const formData = new FormData(this);
     
     try {
@@ -367,7 +429,8 @@ document.querySelector('.add-exercise-form')?.addEventListener('submit', async f
             throw new Error('Failed to add exercise');
         }
         
-        // Reload the page to show the updated workout
+        // Reset form and reload page
+        this.reset();
         window.location.reload();
     } catch (error) {
         console.error('Error:', error);
