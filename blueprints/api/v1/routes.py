@@ -22,7 +22,22 @@ def exercises():
 @api_v1.route('/workouts', methods=['GET', 'POST'])
 def workouts():
     if request.method == 'GET':
-        workouts = Workout.query.order_by(Workout.date_created.desc()).all()
+        # Get the 'created_after' query parameter
+        created_after = request.args.get('created_after')
+        
+        # Start with the base query
+        query = Workout.query
+        
+        # Apply the filter if 'created_after' is provided
+        if created_after:
+            try:
+                created_after_date = datetime.fromisoformat(created_after)
+                query = query.filter(Workout.date_created > created_after_date)
+            except ValueError:
+                return error_response("Invalid date format for 'created_after'", 400)
+        
+        # Order and execute the query
+        workouts = query.order_by(Workout.date_created.desc()).all()
         return api_response([w.to_dict() for w in workouts])
     
     try:
