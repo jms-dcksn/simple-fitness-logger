@@ -11,7 +11,7 @@ async function fetchAPI(endpoint, method = 'GET', data = null) {
         options.body = JSON.stringify(data);
     }
     
-    const response = await fetch(`/api/${endpoint}`, options);
+    const response = await fetch(`/api/v1/${endpoint}`, options);
     return response.json();
 }
 
@@ -26,6 +26,7 @@ async function getExercises() {
 
 // Set logging
 async function logSet(exerciseId, reps, weight, workoutId = null) {
+    console.log('Logging set with data:', { exerciseId, reps, weight, workoutId });
     return await fetchAPI('sets', 'POST', {
         exercise_id: exerciseId,
         reps,
@@ -41,6 +42,73 @@ async function createWorkout(name, exerciseIds) {
         exercises: exerciseIds
     });
 }
+
+// Handle finishing a workout
+async function finishWorkout(workoutId) {
+    try {
+        await fetchAPI(`workouts/${workoutId}`, 'PUT', { // Use fetchAPI
+            finished: true
+        });
+        window.location.href = '/';
+    } catch (error) {
+        alert('Failed to finish workout: ' + error.message);
+    }
+}
+
+            // Handle adding exercise to workout
+            async function addExerciseToWorkout(form) {
+                const searchInput = form.querySelector('input[name="searchExercise"]');
+                const typedName = searchInput.value;
+                
+                const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
+                if (!match) {
+                    alert(`Exercise "${typedName}" not found`);
+                    return;
+                }
+            
+                try {
+                    const workoutId = form.querySelector('input[name="workout_id"]').value;
+                    await fetchAPI(`workouts/${workoutId}/exercises`, 'POST', { // Use fetchAPI
+                        exercise_id: match.id
+                    });
+                    window.location.reload();
+                } catch (error) {
+                    alert('Failed to add exercise: ' + error.message);
+                }
+            }
+
+            async function swapExercise(form) {
+                try {
+                    // Ensure the form elements are correctly accessed
+                        const workoutExerciseId = form.querySelector('input[name="workout_exercise_id"]').value;
+                        const newExerciseId = form.querySelector('select[name="new_exercise_id"]').value;
+                        const workoutId = form.querySelector('input[name="workout_id"]').value;
+                        console.log(newExerciseId)
+                        console.log(workoutExerciseId)
+                        console.log(workoutId)
+
+                        // Check if the values are correctly retrieved
+                        if (!workoutExerciseId || !newExerciseId || !workoutId) {
+                            alert('Please ensure all fields are filled out correctly.');
+                            return;
+                        }
+            
+                    // Remove the old exercise
+                    await fetchAPI(`workouts/${workoutId}/exercises?workout_exercise_id=${workoutExerciseId}`, 'DELETE');
+            
+                    // Add the new exercise
+                    await fetchAPI(`workouts/${workoutId}/exercises`, 'POST', {
+                        exercise_id: parseInt(newExerciseId)
+                    });
+            
+                    // Close modal and reload page
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('swapExerciseModal'));
+                    modal.hide();
+                    window.location.reload();
+                } catch (error) {
+                    alert('Failed to swap exercise: ' + error.message);
+                }
+            }
 
 async function getWorkouts() {
     return await fetchAPI('workouts');
@@ -72,14 +140,6 @@ async function initializeIndexPage() {
     const addExerciseBtn = document.getElementById('addExerciseBtn');
     const quickLogForm = document.getElementById('quickLogForm');
 
-    // // Load existing exercises
-    // const exercises = await getExercises();
-    // exercises.forEach(exercise => {
-    //     const option = document.createElement('option');
-    //     option.value = exercise.id;
-    //     option.textContent = exercise.name;
-    //     exerciseSelect.appendChild(option);
-    // });
 
      // Check if we're on the correct page with the required elements
      if (!exerciseSelect || !addExerciseBtn || !quickLogForm) {

@@ -92,7 +92,7 @@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center bg-gradient" style="background: linear-gradient(45deg, #ff3d3d22, transparent)">
             <h2 class="h3 mb-0">{{ active_workout.name }}</h2>
-            <form action="{{ url_for('finish_workout') }}" method="POST" class="m-0">
+            <form onsubmit="event.preventDefault(); finishWorkout({{ active_workout.id }})" class="m-0">
                 <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-flag-fill"></i> Finish Workout
@@ -108,11 +108,13 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#swapExerciseModal"
-                                data-workout-exercise-id="{{ workout_exercise.id }}">
+                                data-workout-exercise-id="{{ workout_exercise.id }}"
+                                data-workout-id="{{ active_workout.id }}"> 
                             Swap
                         </button>
                         <button type="button" class="btn btn-outline-danger btn-sm delete-exercise"
-                                data-workout-exercise-id="{{ workout_exercise.id }}">
+                                data-workout-exercise-id="{{ workout_exercise.id }}"
+                                data-workout-id="{{ active_workout.id }}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -158,7 +160,7 @@
                 </div>
 
                 <!-- Log New Set Form -->
-                <form class="log-set-form" method="POST" action="{{ url_for('log_set') }}">
+                <form class="log-set-form" onsubmit="event.preventDefault(); logSet(this)">
                     <input type="hidden" name="exercise_id" value="{{ workout_exercise.exercise.id }}">
                     <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
                     <div class="row">
@@ -179,7 +181,7 @@
         <!-- Add this at the bottom of the active workout card, just before the closing card-body div -->
 <div class="add-exercise-section mt-4">
     <h4>Add Exercise</h4>
-    <form class="add-exercise-form" method="POST" action="{{ url_for('add_workout_exercise') }}">
+    <form class="add-exercise-form" onsubmit="event.preventDefault(); addExerciseToWorkout(this)">
         <input type="hidden" name="workout_id" value="{{ active_workout.id }}">
         <div class="row">
             <div class="col">
@@ -218,8 +220,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="swapExerciseForm" method="POST" action="{{ url_for('swap_exercise') }}">
+                <form id="swapExerciseForm" onsubmit="event.preventDefault(); swapExercise(this)">
                     <input type="hidden" name="workout_exercise_id" id="workoutExerciseId">
+                    <input type="hidden" name="workout_id" id="workoutId" value="">
                     <div class="mb-3">
                         <label for="newExercise" class="form-label">Select New Exercise</label>
                         <select class="form-select" id="newExercise" name="new_exercise_id" required>
@@ -236,207 +239,144 @@
     </div>
 </div>
 
-<script>
-// Convert exercises to JSON outside of any function
-const allExercises = {{ exercises|tojson }};
-    
-const addExerciseBtn = document.getElementById('addExerciseBtn');
-const exerciseList = document.getElementById('exerciseList');
+<script>        // Convert exercises to JSON outside of any function
+        const allExercises = {{ exercises|tojson }};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Use fetchAPI from main.js for API calls
 
-if (addExerciseBtn && exerciseList) {
-    addExerciseBtn.addEventListener('click', function() {
-        // Clone the first exercise entry
-        const firstExercise = exerciseList.querySelector('.exercise-entry');
-        const newExercise = firstExercise.cloneNode(true);
-        
-        // Reset the input values
-        const searchInput = newExercise.querySelector('input[type="text"]');
-        const hiddenInput = newExercise.querySelector('input[name="exercises[]"]');
-        searchInput.value = '';
-        hiddenInput.value = '';
-        
-        // Create and add remove button
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-danger';
-        removeBtn.textContent = 'Remove';
-        removeBtn.onclick = function() {
-            newExercise.remove();
-        };
-        
-        // Add the remove button to the flex container
-        newExercise.querySelector('.d-flex').appendChild(removeBtn);
-        
-        // Add the new exercise to the list
-        exerciseList.appendChild(newExercise);
-    });
-}
-
-// JavaScript to handle exercise selection for all exercise entries
-document.getElementById('workoutForm')?.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Get all exercise entries
-    const exerciseEntries = document.querySelectorAll('.exercise-entry');
-    let hasError = false;
-
-    exerciseEntries.forEach(entry => {
-        const typedName = entry.querySelector('input[type="text"]').value;
-        const hiddenInput = entry.querySelector('input[name="exercises[]');
-        
-        // Find matching exercise ID
-        const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
-        if (match) {
-            hiddenInput.value = match.id;
-        } else {
-            hasError = true;
-            alert(`Exercise "${typedName}" not found`);
-        }
-    });
-
-    if (!hasError) {
-        // If all exercises are valid, submit the form
-        this.submit();
-    }
-});
-
-const swapExerciseModal = document.getElementById('swapExerciseModal');
-if (swapExerciseModal) {
-    swapExerciseModal.addEventListener('show.bs.modal', function (event) {
-        // Add console.log for debugging
-        console.log('Modal opening, button:', event.relatedTarget);
-        
-        const button = event.relatedTarget;
-        const workoutExerciseId = button.getAttribute('data-workout-exercise-id');
-        console.log('workoutExerciseId:', workoutExerciseId);
-        
-        // Set the value in the hidden input
-        const hiddenInput = document.getElementById('workoutExerciseId');
-        hiddenInput.value = workoutExerciseId;
-        console.log('Hidden input value set to:', hiddenInput.value);
-    });
-}
-
- // Add handler for swap exercise form
- const swapExerciseForm = document.getElementById('swapExerciseForm');
-    if (swapExerciseForm) {
-        swapExerciseForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
+            // Handle new workout creation
+            document.getElementById('workoutForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const exerciseEntries = document.querySelectorAll('.exercise-entry');
+                let exercises = [];
+                let hasError = false;
             
-            try {
-                const response = await fetch(this.action, {
-                    method: 'POST',
-                    body: formData
+                exerciseEntries.forEach(entry => {
+                    const typedName = entry.querySelector('input[type="text"]').value;
+                    const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
+                    
+                    if (match) {
+                        exercises.push(match.id);
+                    } else {
+                        hasError = true;
+                        alert(`Exercise "${typedName}" not found`);
+                    }
                 });
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Server response:', errorText);
-                    throw new Error(`HTTP error! status: ${response.status}`);
+            
+                if (!hasError) {
+                    try {
+                        await fetchAPI('workouts', 'POST', { // Use fetchAPI
+                            name: document.getElementById('workoutName').value,
+                            exercises: exercises
+                        });
+                        window.location.reload();
+                    } catch (error) {
+                        alert('Failed to create workout: ' + error.message);
+                    }
                 }
-                
-                const data = await response.json();
-                window.location.reload();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error swapping exercise');
-            }
-        });
-    }
-
-// Add handler for repeat workout buttons
-document.querySelectorAll('.repeat-workout').forEach(button => {
-        button.addEventListener('click', async function() {
-            const workoutId = this.getAttribute('data-workout-id');
-            try {
-                const response = await fetch('/api/clone_workout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ workout_id: workoutId })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to clone workout');
-                }
-                
-                // Reload the page to show the new active workout
-                window.location.reload();
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to clone workout');
-            }
-        });
-    });
-
-// Add handler for delete exercise buttons
-document.querySelectorAll('.delete-exercise').forEach(button => {
-    button.addEventListener('click', async function() {
-        if (!confirm('Are you sure you want to delete this exercise from the workout?')) {
-            return;
-        }
-        
-        const workoutExerciseId = this.getAttribute('data-workout-exercise-id');
-        try {
-            const response = await fetch('/api/delete_workout_exercise', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ workout_exercise_id: workoutExerciseId })
             });
             
-            if (!response.ok) {
-                throw new Error('Failed to delete exercise');
-            }
+            // Handle deleting exercises from workout
+            document.querySelectorAll('.delete-exercise').forEach(button => {
+                button.addEventListener('click', async function() {
+                    if (!confirm('Are you sure you want to delete this exercise from the workout?')) {
+                        return;
+                    }
+                    
+                    const workoutExerciseId = this.getAttribute('data-workout-exercise-id');
+                    const workoutId = this.getAttribute('data-workout-id');
+                    try {
+                        await fetchAPI(`workouts/${workoutId}/exercises?workout_exercise_id=${workoutExerciseId}`, 'DELETE');
+                        window.location.reload();
+                    } catch (error) {
+                        alert('Failed to delete exercise: ' + error.message);
+                    }
+                });
+            });
             
-            // Reload the page to show the updated workout
-            window.location.reload();
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to delete exercise');
-        }
-    });
-});
+            // Handle repeating workouts
+            document.querySelectorAll('.repeat-workout').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const workoutId = this.getAttribute('data-workout-id');
+                    try {
+                        await fetchAPI('workouts/clone', 'POST', { // Use fetchAPI
+                            workout_id: workoutId
+                        });
+                        window.location.reload();
+                    } catch (error) {
+                        alert('Failed to clone workout: ' + error.message);
+                    }
+                });
+            });
+        
+            // Initialize modals and other Bootstrap components
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => new bootstrap.Modal(modal));
+        
+            // Handle exercise entry addition
+            const addExerciseBtn = document.getElementById('addExerciseBtn');
+            const exerciseList = document.getElementById('exerciseList');
+        
+            if (addExerciseBtn && exerciseList) {
+                addExerciseBtn.addEventListener('click', function() {
+                    const firstExercise = exerciseList.querySelector('.exercise-entry');
+                    const newExercise = firstExercise.cloneNode(true);
+                    
+                    // Reset inputs
+                    newExercise.querySelectorAll('input').forEach(input => input.value = '');
+                    
+                    // Add remove button
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-danger';
+                    removeBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    removeBtn.onclick = () => newExercise.remove();
+                    
+                    newExercise.querySelector('.d-flex').appendChild(removeBtn);
+                    exerciseList.appendChild(newExercise);
+                });
+            }
+            //Pass workout ID to swap exercise modal
+            document.querySelectorAll('.btn-outline-secondary.btn-sm[data-bs-target="#swapExerciseModal"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const workoutExerciseId = this.getAttribute('data-workout-exercise-id');
+                    const workoutId = this.getAttribute('data-workout-id');
+                    console.log(workoutId, workoutExerciseId)
+                    
+                    // Set the values in the modal
+                    document.getElementById('workoutExerciseId').value = workoutExerciseId;
+                    document.getElementById('workoutId').value = workoutId;  // Ensure this input exists in the modal
+                });
+            });
 
-// Add handler for add exercise form with searchable input
-document.querySelector('.add-exercise-form')?.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const searchInput = this.querySelector('input[name="searchExercise"]');
-    const hiddenInput = this.querySelector('input[name="exercise_id"]');
-    const typedName = searchInput.value;
-    
-    // Find matching exercise ID
-    const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
-    if (!match) {
-        alert(`Exercise "${typedName}" not found`);
-        return;
-    }
-    
-    hiddenInput.value = match.id;
-    const formData = new FormData(this);
-    
-    try {
-        const response = await fetch(this.action, {
-            method: 'POST',
-            body: formData
+            // Handle logging a set
+            document.querySelectorAll('.log-set-form').forEach(form => {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const exerciseId = form.querySelector('input[name="exercise_id"]').value;
+                    const workoutId = form.querySelector('input[name="workout_id"]').value;
+                    const reps = form.querySelector('input[name="reps"]').value;
+                    const weight = form.querySelector('input[name="weight"]').value || null;
+
+                    // Ensure exerciseId, workoutId, and reps are correctly retrieved
+                    if (!exerciseId || !workoutId || !reps) {
+                        alert('Please fill in all required fields.');
+                        return;
+                    }
+
+                    try {
+                        await logSet(parseInt(exerciseId), parseInt(reps), weight ? parseFloat(weight) : null, parseInt(workoutId));
+                        //alert('Set logged successfully!');
+                        window.location.reload();
+                    } catch (error) {
+                        alert('Error logging set');
+                        console.error(error);
+                    }
+                });
+            });
         });
-        
-        if (!response.ok) {
-            throw new Error('Failed to add exercise');
-        }
-        
-        // Reset form and reload page
-        this.reset();
-        window.location.reload();
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to add exercise');
-    }
-});
-
 </script>
 {% endblock %}

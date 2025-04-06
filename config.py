@@ -7,10 +7,10 @@ APP_METADATA = {
     
     # Navigation items
     'nav_items': [
-        {'name': 'Home', 'route': 'index'},
-        {'name': 'Log Workout', 'route': 'workout'},
-        {'name': 'History', 'route': 'history'},
-        {'name': 'Admin', 'route': 'admin'}
+        {'name': 'Home', 'route': 'views.index'},
+        {'name': 'Log Workout', 'route': 'views.workout'},
+        {'name': 'History', 'route': 'views.history'},
+        {'name': 'Admin', 'route': 'views.admin'}
     ],
     
     # Branding

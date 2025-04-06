@@ -217,10 +217,12 @@ document.addEventListener('DOMContentLoaded', function() {
             date: dateFilter.value || ''
         });
         
-        fetch(`/api/history/filter?${params}`)
+        fetch(`/api/v1/history/filter?${params}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Network response was not ok');
+                    });
                 }
                 return response.json();
             })
@@ -229,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error fetching filtered results. Please try again.');
+                alert('Error fetching filtered results: ' + error.message);
             });
     }
     

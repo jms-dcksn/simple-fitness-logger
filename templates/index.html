@@ -18,7 +18,7 @@
                     <i class="bi bi-journal-plus"></i> Log Workout
                 </h2>
                 <p class="card-text" style="color: #6c757d; opacity: 0.9;">Track your sets, reps, and weights for each exercise.</p>
-                <a href="{{ url_for('workout') }}" class="btn btn-primary">
+                <a href="{{ url_for('views.workout') }}" class="btn btn-primary">
                     Start Workout <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
@@ -32,7 +32,7 @@
                     <i class="bi bi-graph-up"></i> View History
                 </h2>
                 <p class="card-text" style="color: #6c757d; opacity: 0.9;">Check your previous workouts and track your progress.</p>
-                <a href="{{ url_for('history') }}" class="btn btn-primary">
+                <a href="{{ url_for('views.history') }}" class="btn btn-primary">
                     View History <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
@@ -103,50 +103,53 @@
     // Convert exercises to JSON outside of any function
     const allExercises = {{ exercises|tojson }};
     
-    // JavaScript to handle exercise selection
-    document.getElementById('quickLogForm')?.addEventListener('submit', function(e) {
-        e.preventDefault();  // Prevent the default form submission
+      // JavaScript to handle exercise selection and submission
+    document.getElementById('quickLogForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
         const typedName = document.getElementById('searchExercise').value;
         const hiddenInput = document.getElementById('selectedExerciseId');
         
         // Find matching exercise ID
         const match = allExercises.find(ex => ex.name.toLowerCase() === typedName.toLowerCase());
-        if (match) {
-            hiddenInput.value = match.id;
-        } else {
-            hiddenInput.value = '';
+        if (!match) {
+            alert('Please select a valid exercise from the list');
+            return;
         }
 
-        // Proceed with form submission using the found exercise ID
-        const exerciseId = hiddenInput.value;
-        const reps = document.getElementById('reps').value;
+        const exerciseId = match.id;
+        const reps = parseInt(document.getElementById('reps').value);
         const weight = document.getElementById('weight').value || null;
         
-        fetch('/log_set', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                exercise_id: exerciseId,
-                reps: parseInt(reps),
-                weight: weight ? parseFloat(weight) : null
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                // Reset form
-                this.reset();
-                alert('Set logged successfully!');
-            } else {
-                alert('Error logging set');
+        try {
+            const response = await fetch('/api/v1/sets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    exercise_id: exerciseId,
+                    reps: reps,
+                    weight: weight ? parseFloat(weight) : null
+                })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Error logging set');
             }
-        })
-        .catch(error => {
+
+            // Reset form
+            this.reset();
+            
+            // Show success message
+            alert('Set logged successfully!');
+            
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error logging set');
-        });
+            alert(error.message || 'Error logging set');
+        }
     });
 </script>
 

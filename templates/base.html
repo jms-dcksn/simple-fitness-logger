@@ -17,7 +17,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">{{ metadata.brand_name }}</a>
+            <a class="navbar-brand" href="{{ url_for('views.index') }}">{{ metadata.brand_name }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
                     aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -42,26 +42,27 @@
         </div>
     </main>
 
-    <!-- Common New Exercise Modal - Move this to base.html -->
-    <div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="newExerciseForm" method="POST" action="{{ url_for('create_exercise') }}" data-page="workout">
-                        <div class="mb-3">
-                            <label for="exerciseName" class="form-label">Exercise Name</label>
-                            <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Create Exercise</button>
-                    </form>
-                </div>
+<!-- Update the modal form -->
+<div class="modal fade" id="newExerciseModal" tabindex="-1" aria-labelledby="newExerciseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newExerciseModalLabel">Create New Exercise</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Remove the action attribute and add onsubmit handler -->
+                <form id="newExerciseForm" data-page="workout" onsubmit="event.preventDefault(); handleNewExercise(this);">
+                    <div class="mb-3">
+                        <label for="exerciseName" class="form-label">Exercise Name</label>
+                        <input type="text" class="form-control" id="exerciseName" name="exercise_name" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Exercise</button>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
     <!-- JavaScript files at the end of body -->
      <!-- jQuery must be loaded before Bootstrap JavaScript -->
@@ -71,18 +72,57 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize the modal once
-            const newExerciseForm = document.getElementById('newExerciseForm');
-            if (newExerciseForm) {
-                newExerciseForm.addEventListener('submit', fitnessUtils.handleExerciseFormSubmit);
-            }
-
+            // Initialize the modal
+            const newExerciseModal = document.getElementById('newExerciseModal');
+            
             // Clean up modal content when hidden
-            document.getElementById('newExerciseModal').addEventListener('hidden.bs.modal', function () {
+            newExerciseModal.addEventListener('hidden.bs.modal', function () {
                 const form = this.querySelector('form');
                 if (form) form.reset();
             });
         });
-    </script>
+        
+        // New exercise handler
+        async function handleNewExercise(form) {
+            try {
+                const response = await fetch('/api/v1/exercises', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: form.exercise_name.value
+                    })
+                });
+        
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to create exercise');
+                }
+        
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newExerciseModal'));
+                modal.hide();
+        
+                // Refresh the page or update exercise lists
+                if (form.dataset.page === 'workout') {
+                    // If we're on the workout page, refresh to show new exercise
+                    window.location.reload();
+                } else {
+                    // Otherwise, just add to any exercise dropdowns
+                    const exerciseSelect = document.querySelector('select[name="exercise"]');
+                    if (exerciseSelect) {
+                        const option = new Option(data.data.name, data.data.id);
+                        exerciseSelect.add(option);
+                    }
+                }
+        
+            } catch (error) {
+                console.error('Error creating exercise:', error);
+                alert('Failed to create exercise: ' + error.message);
+            }
+        }
+        </script>
 </body>
 </html>
